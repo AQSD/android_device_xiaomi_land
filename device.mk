@@ -246,12 +246,17 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/thermal-engine.conf:system/etc/thermal-engine.conf
 
+# WCNSS Service
+PRODUCT_PACKAGES += \
+    wcnss_service
+
 # Wi-Fi
 PRODUCT_PACKAGES += \
     libQWiFiSoftApCfg \
     hostapd \
     wpa_supplicant \
-    wpa_supplicant.conf
+    wpa_supplicant.conf \
+    libwcnss_qmi
 
 # Properties
 PRODUCT_PROPERTY_OVERRIDES += \
