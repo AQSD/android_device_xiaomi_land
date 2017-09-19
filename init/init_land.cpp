@@ -126,22 +126,6 @@ static void init_alarm_boot_properties()
      }
 }
 
-void fp_properties(bool fpc)
-{
-    if (fpc) {
-        property_set("persist.sys.fp.goodix", "0");
-        property_set("persist.sys.fp.onstart", "1");
-        property_set("persist.sys.fp.vendor", "searchf");
-        property_set("ro.boot.fpsensor", "fpc");
-    } else {
-        property_set("persist.sys.fp.goodix", "1");
-        property_set("persist.sys.fp.onstart", "0");
-        property_set("persist.sys.fp.vendor", "goodix");
-        property_set("ro.boot.fpsensor", "gdx");
-        property_set("ro.hardware.fingerprint", "goodix");
-    }
-}
-
 void read_ramconfig()
 {
     if (is3GB()) {
@@ -176,22 +160,17 @@ void variant_properties()
     //Variants
     if (board_id == "S88537AA1") {
         property_set("ro.build.display.wtid", "SW_S88537AA1_V079_M20_MP_XM");
-        fp_properties(true);
     } else if (board_id == "S88537AB1") {
         property_set("ro.build.display.wtid", "SW_S88537AB1_V079_M20_MP_XM");
-        property_override("ro.product.model", "Redmi 3X");
-        fp_properties(true);  
+        property_override("ro.product.model", "Redmi 3X"); 
     } else if (board_id == "S88537AC1") {
         property_set("ro.build.display.wtid", "SW_S88537AC1_V079_M20_MP_XM");
-        fp_properties(false);
     } else if (board_id == "S88537BA1") {
         property_set("ro.build.display.wtid", "SW_S88537BA1_V079_M20_MP_XM");
         property_set("mm.enable.qcom_parser", "196495");
-        fp_properties(true);
     } else if (board_id == "S88537CA1") {
         property_set("ro.build.display.wtid", "SW_S88537CA1_V079_M20_MP_XM");
         property_set("mm.enable.qcom_parser", "196495");
-        fp_properties(true);
     } else if (board_id == "S88537EC1") {
         property_set("ro.build.display.wtid", "SW_S88537EC1_V079_M20_MP_XM");
         property_set("mm.enable.qcom_parser", "196495");
