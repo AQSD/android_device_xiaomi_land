@@ -1120,9 +1120,6 @@ bin/loc_launcher
 bin/lowi-server
 bin/xtwifi-client
 bin/xtwifi-inet-agent
-etc/flp.conf
-etc/izat.conf
-etc/lowi.conf
 etc/permissions/com.qti.location.sdk.xml
 etc/permissions/com.qualcomm.location.xml
 etc/cacert_location.pem
