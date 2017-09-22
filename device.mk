@@ -155,7 +155,7 @@ PRODUCT_PACKAGES += \
     gps.msm8937 \
     libgnsspps \
     libcurl \
-	gps.conf
+    gps.conf
 
 # Init
 PRODUCT_PACKAGES += \
