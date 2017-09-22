@@ -154,7 +154,8 @@ PRODUCT_BOOT_JARS += \
 PRODUCT_PACKAGES += \
     gps.msm8937 \
     libgnsspps \
-    libcurl
+    libcurl \
+    gps.conf
 
 # Init
 PRODUCT_PACKAGES += \
