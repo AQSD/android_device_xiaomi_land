@@ -658,20 +658,17 @@ service gx_fpd /system/bin/gx_fpd
     class core
     user root
     group system system
-    oneshot
     disabled
 
 on property:persist.sys.fp.vendor=switchf
     stop gx_fpd
     setprop persist.sys.fp.vendor searchf
-    start fingerprintd
     setprop fpc.fp.miui.token 0
     setprop ro.boot.fpsensor fpc
     setprop ro.hardware.fingerprint searchf
     setprop persist.sys.fp.onstart=1
 
 on property:persist.sys.fp.vendor=goodix
-    #start fingerprintd
     setprop goodix.fp.miui.analyse 1
     setprop goodix.fp.miui.token 0
     setprop ro.boot.fpsensor gdx
