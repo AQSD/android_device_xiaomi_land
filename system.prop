@@ -49,6 +49,7 @@ qcom.bluetooth.soc=smd
 camera.hal1.packagelist=com.skype.raider,com.google.android.talk,com.whatsapp,net.sourceforge.opencamera
 persist.camera.is_type=1
 persist.camera.gyro.android=1
+media.camera.ts.monotonic=1
 camera.display.umax=1920x1080
 camera.display.lmax=1280x720
 persist.ts.postmakeup=true
