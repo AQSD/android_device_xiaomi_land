@@ -154,3 +154,5 @@ telephony.lteOnCdmaDevice=1
 ro.ril.fast.dormancy.rule=0
 ro.ril.hsxpa=0
 
+# Wi-Fi
+wifi.interface=wlan0

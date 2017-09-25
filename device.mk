@@ -262,17 +262,5 @@ PRODUCT_PACKAGES += \
     wpa_supplicant.conf \
     libwcnss_qmi
 
-# Properties
-PRODUCT_PROPERTY_OVERRIDES += \
-    wifi.interface=wlan0
-
-#for internal debug we can remove this
-ADDITIONAL_DEFAULT_PROPERTIES += \
-    ro.secure=0 \
-    ro.adb.secure=0 \
-    ro.debuggable=1 \
-    persist.service.adb.enable=1 \
-    security.perf_harden=0
-
 # Inherit proprietary files
 $(call inherit-product-if-exists, vendor/xiaomi/land/land-vendor.mk)
