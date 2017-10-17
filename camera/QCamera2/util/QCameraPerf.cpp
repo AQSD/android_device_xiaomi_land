@@ -178,6 +178,22 @@ void QCameraPerfLock::lock_deinit()
     Mutex::Autolock lock(mLock);
     if (mPerfLockEnable) {
         LOGD("E");
+
+        if (mActivePowerHints.empty() == false) {
+            // Disable the active power hint
+            mCurrentPowerHint = *mActivePowerHints.begin();
+            powerHintInternal(mCurrentPowerHint, false);
+            mActivePowerHints.clear();
+        }
+
+        if ((NULL != perf_lock_rel) && (mPerfLockHandleTimed >= 0)) {
+            (*perf_lock_rel)(mPerfLockHandleTimed);
+        }
+
+        if ((NULL != perf_lock_rel) && (mPerfLockHandle >= 0)) {
+            (*perf_lock_rel)(mPerfLockHandle);
+        }
+
         if (mDlHandle) {
             perf_lock_acq  = NULL;
             perf_lock_rel  = NULL;
@@ -377,7 +393,7 @@ int32_t QCameraPerfLock::lock_rel_timed()
     if (mPerfLockEnable) {
         LOGD("E");
         if (mPerfLockHandleTimed < 0) {
-            LOGE("mPerfLockHandle < 0,check if lock is acquired");
+            LOGW("mPerfLockHandle < 0,check if lock is acquired");
             return ret;
         }
         LOGD("perf_handle_rel %d ", mPerfLockHandleTimed);
@@ -419,7 +435,7 @@ int32_t QCameraPerfLock::lock_rel()
     if (mPerfLockEnable) {
         LOGD("E");
         if (mPerfLockHandle < 0) {
-            LOGE("mPerfLockHandle < 0,check if lock is acquired");
+            LOGW("mPerfLockHandle < 0,check if lock is acquired");
             return ret;
         }
         LOGD("perf_handle_rel %d ", mPerfLockHandle);
@@ -498,12 +514,12 @@ void QCameraPerfLock::powerHint(power_hint_t hint, bool enable)
         for (List<power_hint_t>::iterator it = mActivePowerHints.begin();
                 it != mActivePowerHints.end(); ++it) {
             if (*it == hint) {
-                mActivePowerHints.erase(it);
                 if (it != mActivePowerHints.begin()) {
-                    LOGE("Request to remove the previous power hint: %d instead of"
+                    LOGW("Request to remove the previous power hint: %d instead of "
                             "currently active power hint: %d", static_cast<int>(hint),
                                                             static_cast<int>(mCurrentPowerHint));
                 }
+                mActivePowerHints.erase(it);
                 break;
             }
         }

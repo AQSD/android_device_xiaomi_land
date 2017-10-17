@@ -262,13 +262,9 @@ void QCamera2HardwareInterface::zsl_channel_cb(mm_camera_super_buf_t *recvd_fram
     }
 
     // Wait on Postproc initialization if needed
-    if (NO_ERROR != pme->waitDeferredWork(pme->mReprocJob)) {
-        LOGE("Reprocess Deferred work failed");
-        return;
-    }
-
-    // send to postprocessor
-    if (NO_ERROR != pme->m_postprocessor.processData(frame)) {
+    // then send to postprocessor
+    if ((NO_ERROR != pme->waitDeferredWork(pme->mReprocJob)) ||
+            (NO_ERROR != pme->m_postprocessor.processData(frame))) {
         LOGE("Failed to trigger process data");
         pChannel->bufDone(recvd_frame);
         free(frame);
@@ -448,10 +444,9 @@ void QCamera2HardwareInterface::capture_channel_cb_routine(mm_camera_super_buf_t
     }
 
     // Wait on Postproc initialization if needed
-    pme->waitDeferredWork(pme->mReprocJob);
-
-    // send to postprocessor
-    if (NO_ERROR != pme->m_postprocessor.processData(frame)) {
+    // then send to postprocessor
+    if ((NO_ERROR != pme->waitDeferredWork(pme->mReprocJob)) ||
+            (NO_ERROR != pme->m_postprocessor.processData(frame))) {
         LOGE("Failed to trigger process data");
         pChannel->bufDone(recvd_frame);
         free(frame);
@@ -740,7 +735,9 @@ void QCamera2HardwareInterface::synchronous_stream_cb_routine(
     // Otherwise, mBootToMonoTimestampOffset value will be 0.
     frameTime = frameTime - pme->mBootToMonoTimestampOffset;
     // Calculate the future presentation time stamp for displaying frames at regular interval
-    mPreviewTimestamp = pme->mCameraDisplay.computePresentationTimeStamp(frameTime);
+    if (pme->getRecordingHintValue() == true) {
+        mPreviewTimestamp = pme->mCameraDisplay.computePresentationTimeStamp(frameTime);
+    }
     stream->mStreamTimestamp = frameTime;
     memory = (QCameraGrallocMemory *)super_frame->bufs[0]->mem_info;
 
@@ -976,6 +973,11 @@ int32_t QCamera2HardwareInterface::sendPreviewCallback(QCameraStream *stream,
     stream->getFrameDimension(preview_dim);
     stream->getFormat(previewFmt);
 
+    yStrideToApp = preview_dim.width;
+    yScanlineToApp = preview_dim.height;
+    uvStrideToApp = yStrideToApp;
+    uvScanlineToApp = yScanlineToApp / 2;
+
     /* The preview buffer size in the callback should be
      * (width*height*bytes_per_pixel). As all preview formats we support,
      * use 12 bits per pixel, buffer size = previewWidth * previewHeight * 3/2.
@@ -1002,11 +1004,6 @@ int32_t QCamera2HardwareInterface::sendPreviewCallback(QCameraStream *stream,
             yScanline = streamInfo->buf_planes.plane_info.mp[0].scanline;
             uvStride = streamInfo->buf_planes.plane_info.mp[1].stride;
             uvScanline = streamInfo->buf_planes.plane_info.mp[1].scanline;
-
-            yStrideToApp = preview_dim.width;
-            yScanlineToApp = preview_dim.height;
-            uvStrideToApp = yStrideToApp;
-            uvScanlineToApp = yScanlineToApp / 2;
 
             previewBufSize = (size_t)
                     ((yStrideToApp * yScanlineToApp) + (uvStrideToApp * uvScanlineToApp));
@@ -1053,8 +1050,19 @@ int32_t QCamera2HardwareInterface::sendPreviewCallback(QCameraStream *stream,
             }
         }
     } else {
-        LOGE("Invalid preview format for preview callback");
-        return BAD_VALUE;
+        /*Invalid Buffer content. But can be used as a first preview frame trigger in
+        framework/app */
+        previewBufSize = (size_t)
+                    ((yStrideToApp * yScanlineToApp) +
+                    (uvStrideToApp * uvScanlineToApp));
+        previewBufSizeFromCallback = 0;
+        LOGW("Invalid preview format. Buffer content cannot be processed size = %d",
+                previewBufSize);
+        dataToApp = mGetMemory(-1, previewBufSize, 1, mCallbackCookie);
+        if (!dataToApp || !dataToApp->data) {
+            LOGE("mGetMemory failed.\n");
+            return NO_MEMORY;
+        }
     }
     qcamera_callback_argm_t cbArg;
     memset(&cbArg, 0, sizeof(qcamera_callback_argm_t));
@@ -1543,6 +1551,14 @@ void QCamera2HardwareInterface::video_stream_cb_routine(mm_camera_super_buf_t *s
             cbArg.cb_type = QCAMERA_DATA_TIMESTAMP_CALLBACK;
             cbArg.msg_type = CAMERA_MSG_VIDEO_FRAME;
             cbArg.data = video_mem;
+
+            // For VT usecase, ISP uses AVtimer not CLOCK_BOOTTIME as time source.
+            // So do not change video timestamp.
+            if (!pme->mParameters.isAVTimerEnabled()) {
+                // Convert Boottime from camera to Monotime for video if needed.
+                // Otherwise, mBootToMonoTimestampOffset value will be 0.
+                timeStamp = timeStamp - pme->mBootToMonoTimestampOffset;
+            }
             cbArg.timestamp = timeStamp;
             int32_t rc = pme->m_cbNotifier.notifyCallback(cbArg);
             if (rc != NO_ERROR) {
@@ -1769,15 +1785,9 @@ void QCamera2HardwareInterface::raw_channel_cb_routine(mm_camera_super_buf_t *su
     }
 
     // Wait on Postproc initialization if needed
-    if (NO_ERROR != pme->waitDeferredWork(pme->mReprocJob)) {
-        LOGE("Reprocess Deferred work failed");
-        pChannel->bufDone(super_frame);
-        free(frame);
-        frame = NULL;
-        return;
-    }
-
-    if (NO_ERROR != pme->m_postprocessor.processData(frame)) {
+    // then send to postprocessor
+    if ((NO_ERROR != pme->waitDeferredWork(pme->mReprocJob)) ||
+            (NO_ERROR != pme->m_postprocessor.processData(frame))) {
         LOGE("Failed to trigger process data");
         pChannel->bufDone(super_frame);
         free(frame);
@@ -2069,12 +2079,12 @@ void QCamera2HardwareInterface::metadata_stream_cb_routine(mm_camera_super_buf_t
             payload->faces_data = faces_data;
             int32_t rc = pme->processEvt(QCAMERA_SM_EVT_EVT_INTERNAL, payload);
             if (rc != NO_ERROR) {
-                LOGW("%s: processEvt face detection failed", __func__);
+                LOGW("processEvt face detection failed");
                 free(payload);
                 payload = NULL;
             }
         } else {
-            LOGE("%s: No memory for face detect qcamera_sm_internal_evt_payload_t", __func__);
+            LOGE("No memory for face detect qcamera_sm_internal_evt_payload_t");
         }
     }
 
@@ -2923,8 +2933,8 @@ void QCamera2HardwareInterface::fillFacesData(cam_faces_data_t &faces_data,
             faces_data.detection_data.num_faces_detected = MAX_ROI;
         }
 
-        LOGH("[KPI Perf] %s: PROFILE_NUMBER_OF_FACES_DETECTED %d",
-                __func__,faces_data.detection_data.num_faces_detected);
+        LOGH("[KPI Perf] PROFILE_NUMBER_OF_FACES_DETECTED %d",
+                faces_data.detection_data.num_faces_detected);
 
         IF_META_AVAILABLE(cam_face_recog_data_t, p_recog_data,
                 CAM_INTF_META_FACE_RECOG, metadata) {
