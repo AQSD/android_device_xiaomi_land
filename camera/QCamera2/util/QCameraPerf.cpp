@@ -515,11 +515,7 @@ void QCameraPerfLock::powerHint(power_hint_t hint, bool enable)
                 it != mActivePowerHints.end(); ++it) {
             if (*it == hint) {
                 if (it != mActivePowerHints.begin()) {
-<<<<<<< HEAD
-                    LOGE("Request to remove the previous power hint: %d instead of"
-=======
                     LOGW("Request to remove the previous power hint: %d instead of "
->>>>>>> 759e537... QCamera2: Disable encode power hint with camera close
                             "currently active power hint: %d", static_cast<int>(hint),
                                                             static_cast<int>(mCurrentPowerHint));
                 }
